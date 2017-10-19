@@ -1,4 +1,8 @@
 clc
+%需要定义全局的变量
+width=80;
+height=80;
+GridsNum=width*height;
 %% --------------Ingestion----------------------
 VariableNames={'bikeIds','Long','Lat','biketype','Time'};
 TextscanFormats={'%s','%.15f', '%.15f' ,'%u' ,'%s'};
@@ -6,14 +10,14 @@ dtNum='Test4All_XZ'; %方便维护代码
 Directory=['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\Data_XZ'];
 Dir_Stru=dir(Directory);
 %由于需要读取每一个文件以后再进行合并OD_MAN，所以现在这里初始化
-OD_M_all=sparse(zeros(10000,10000)); %纵向↓为O 横向→为D 对角线没意义
-OD_A_all=sparse(zeros(10000,10000)); %纵向↓为O 横向→为D 对角线没意义
-OD_N_all=sparse(zeros(10000,10000)); %纵向↓为O 横向→为D 对角线没意义
+OD_M_all=sparse(zeros(GridsNum,GridsNum)); %纵向↓为O 横向→为D 对角线没意义
+OD_A_all=sparse(zeros(GridsNum,GridsNum)); %纵向↓为O 横向→为D 对角线没意义
+OD_N_all=sparse(zeros(GridsNum,GridsNum)); %纵向↓为O 横向→为D 对角线没意义
 
 %----更新于1017-10-06
-Supply_M_all=sparse(zeros(10000,1));
-Supply_A_all=sparse(zeros(10000,1));
-Supply_N_all=sparse(zeros(10000,1));
+Supply_M_all=sparse(zeros(GridsNum,1));
+Supply_A_all=sparse(zeros(GridsNum,1));
+Supply_N_all=sparse(zeros(GridsNum,1));
 %--------
 
 dataStore_all=table();
@@ -31,8 +35,8 @@ t_long=dataStore.Long; %t_long与t_lat都只是测试用途
 t_lat=dataStore.Lat;
 t_bikeid=dataStore.bikeIds;
 % 等间距划分区域坐标，得到一个100*100的大矩阵
-zone_long=linspace(121.3647425445,121.4353779391,101);%是101而不是100！
-zone_lat=linspace(31.0939138469,31.1522631725,101);
+zone_long=linspace(121.3647425445,121.4353779391,(width+1));%是101而不是100！
+zone_lat=linspace(31.0939138469,31.1522631725,(height+1));
 t_long_idx=zeros(length(t_long),1);
 t_lat_idx=zeros(length(t_lat),1);
 t_zone_idx=zeros(length(t_lat),1);
@@ -46,7 +50,7 @@ for counter=1:length(t_long_idx)
 end
 clear tmp_lat tmp_lng counter
 tmp_zone_idx=find(t_long_idx>0&t_lat_idx>0);
-t_zone_idx(tmp_zone_idx)=(t_long_idx(tmp_zone_idx)-1)*100+101-t_lat_idx(tmp_zone_idx);%0表示不在划分的区域中从左上序数往右下递增 ↓↓↓这种形式，矩阵列向量一样
+t_zone_idx(tmp_zone_idx)=(t_long_idx(tmp_zone_idx)-1)*height+height+1-t_lat_idx(tmp_zone_idx);%0表示不在划分的区域中从左上序数往右下递增 ↓↓↓这种形式，矩阵列向量一样
 clear tmp_zone_idx
 dataStore.ZoneIdx=t_zone_idx;%将所属区域添加到表中
 % Write Table or not
@@ -100,7 +104,7 @@ t_zone_idx_N=t_zone_idx(idx_time_N);
 %和亢男学长讨论完，这个就是一个网络的问题
 %考虑将MAN三个时间段中以bikeids为切入点，判断相应的经纬度改变是否改变，进而按照时间顺序构建OD矩阵，OD矩阵为切分的100*100的square但是asymmetric（有向）
 %% 先对morning进行处理，以下处理都只能针对一天的三个时间段
-OD_M=zeros(10000,10000); %纵向↓为O 横向→为D 对角线没意义
+OD_M=zeros(GridsNum,GridsNum); %纵向↓为O 横向→为D 对角线没意义
 [~,tmp_idx_o2n,tmp_idx_n2o]=unique(t_bikeid_M); %只能一天一天地判断！
 FLG=zeros(length(tmp_idx_o2n),1);
 for counterM=1:length(tmp_idx_o2n)
@@ -121,7 +125,7 @@ end
 OD_M=sparse(OD_M);
 OD_M=OD_M+diag(-diag(OD_M));
 %--------------------------重复生成A和N的-----------------------
-OD_A=zeros(10000,10000); %纵向↓为O 横向→为D 对角线没意义
+OD_A=zeros(GridsNum,GridsNum); %纵向↓为O 横向→为D 对角线没意义
 [~,tmp_idx_o2n,tmp_idx_n2o]=unique(t_bikeid_A);
 FLG=zeros(length(tmp_idx_o2n),1);
 for counterA=1:length(tmp_idx_o2n)
@@ -142,7 +146,7 @@ end
 OD_A=sparse(OD_A);
 OD_A=OD_A+diag(-diag(OD_A));
 
-OD_N=zeros(10000,10000); %纵向↓为O 横向→为D 对角线没意义
+OD_N=zeros(GridsNum,GridsNum); %纵向↓为O 横向→为D 对角线没意义
 [~,tmp_idx_o2n,tmp_idx_n2o]=unique(t_bikeid_N);
 FLG=zeros(length(tmp_idx_o2n),1);
 for counterN=1:length(tmp_idx_o2n)
@@ -233,7 +237,7 @@ for ii=['M','A','N']
 % eval(['OD_sumO_' ii '=sum(OD_' ii '_all,2);']); %2是起点图,1是终点图
 % eval(['test=vec2mat(  OD_sumO_' ii ',100);'])
 %------更新于2017-10-12
-eval(['test=vec2mat(  Supply_' ii '_all,100);'])
+eval(['test=vec2mat(  Supply_' ii '_all,height);'])
 %-----
 
 test=test';
@@ -248,7 +252,7 @@ figure
 % imshow(K)
 imshow(XZ_map)
 hold on
-s=surf(linspace(1,y_map,100),linspace(1,x_map,100),0*test,test);
+s=surf(linspace(1,y_map,width),linspace(1,x_map,height),0*test,test);
 % load mycolormap_test.mat
 % colormap (mycolormap_test)
 shading interp
@@ -275,16 +279,16 @@ end
 
 %-----------Louvain方法跑出来的社区分布--------------
 XZ_map=imread('F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\ArcGis_Vis_Test\LongLat_XZ_PS\成品.png');
-Cap_Vec=sparse(zeros(1,10000));
+Cap_Vec=sparse(zeros(1,GridsNum));
 Cap_Vec(LV_Output.ZoneIdx)=1;
-Cap_Mat=vec2mat(Cap_Vec,100);
+Cap_Mat=vec2mat(Cap_Vec,height);
 Cap_Mat=Cap_Mat';
 
 figure
 [x_map,y_map,~]=size(XZ_map);
 imshow(XZ_map)
 hold on
-s=surf(linspace(1,y_map,100),linspace(1,x_map,100),0*Cap_Mat,Cap_Mat);
+s=surf(linspace(1,y_map,width),linspace(1,x_map,height),0*Cap_Mat,Cap_Mat);
 shading interp
 view(2)
 hold off
@@ -319,11 +323,11 @@ clear counter tmp ii tmp_reg
 % Supp_Vec=sparse(zeros(1,10000));
 %% 同一个社区究竟是哪一些区域
 [LV_Output_cmt_uniq,idx_LV_o2n,idx_LV_n2o]=unique(LV_Output.Community);
-Cmt_Vec=sparse(zeros(1,10000));
+Cmt_Vec=sparse(zeros(1,GridsNum));
 Cmt_Vec(LV_Output.ZoneIdx(idx_LV_n2o==10))=1; %可以在这里更换要查看的不同的社区编号，可以发现有意思的区域，如2，
-Cmt_Mat=vec2mat(Cmt_Vec,100);
+Cmt_Mat=vec2mat(Cmt_Vec,height);
 Cmt_Mat=Cmt_Mat';
-DrawMap_XZ(Cmt_Mat,'LouvainCmtDistribution')
+DrawMap_XZ(Cmt_Mat,'LouvainCmtDistribution',width,height)
 %% 开始验证模型的准确性 Part 1/2（预测可能存在的红包车），只判断是否为红包车，具体红包到哪里不予以讨论
 % 先求出供给量
 %
@@ -331,7 +335,7 @@ DrawMap_XZ(Cmt_Mat,'LouvainCmtDistribution')
 dataStore_hour=cell(24-6+1,1);
 %初始化小时数组
 for i=1:size(dataStore_hour,1)
-    dataStore_hour{i,1}=sparse(zeros(1,10000));
+    dataStore_hour{i,1}=sparse(zeros(1,GridsNum));
 end
 
 %----更新于2017-10-06
@@ -376,7 +380,7 @@ end
 %先根据每个时间段区分
 load dataStore_hour_origin_XZ.mat
 fileNum=size(Dir_Stru,1)-2;
-Not_Cmt=setxor(1:10000,LV_Output.ZoneIdx);
+Not_Cmt=setxor(1:GridsNum,LV_Output.ZoneIdx);
 Bar_Handler=waitbar(0,'正在产生阈值稀疏矩阵,区别对待社区与非社区。注意！此时dataStore_hour将成为最后输出变量....');
 for counter_hour=1:size(dataStore_hour,1)
     %先把社区的找出来社区内平均,其实平均并不是最好的选择，因为我判断一个社区是否足够更应该看的是整个社区内的总数是否足够
@@ -435,7 +439,7 @@ for counter=1:length(t_long_idx)
 end
 clear tmp_lat tmp_lng counter
 tmp_zone_idx=find(t_long_idx>0&t_lat_idx>0);
-t_zone_idx(tmp_zone_idx)=(t_long_idx(tmp_zone_idx)-1)*100+101-t_lat_idx(tmp_zone_idx);%0表示不在划分的区域中从左上序数往右下递增 ↓↓↓这种形式，矩阵列向量一样
+t_zone_idx(tmp_zone_idx)=(t_long_idx(tmp_zone_idx)-1)*height+height+1-t_lat_idx(tmp_zone_idx);%0表示不在划分的区域中从左上序数往右下递增 ↓↓↓这种形式，矩阵列向量一样
 clear tmp_zone_idx
 data_Test.ZoneIdx=t_zone_idx;%将所属区域添加到表中
 clear t_long t_lat t_bikeid t_long_idx t_lat_idx t_zone_idx
@@ -509,9 +513,9 @@ for counter_IntSec=1:(size(Valid_Result,1)-1)
    RedPac_Hour_Counter=0;
    Pred_RedPac=find(Valid_Result{counter_IntSec,1}<0);%1*n的向量
 %    %画图专用
-    Pred_Vec=sparse(zeros(1,10000));
+    Pred_Vec=sparse(zeros(1,GridsNum));
     Pred_Vec(1,Pred_RedPac)=Pred_Vec(1,Pred_RedPac)+1;  
-    RedPac_Vec=sparse(zeros(1,10000));
+    RedPac_Vec=sparse(zeros(1,GridsNum));
     
    for counter_RedPac=1:size(dataStore_RedPac.Time,1)
      tmp_reg=regexp(dataStore_RedPac.Time{counter_RedPac,1},':','split');
@@ -528,10 +532,10 @@ for counter_IntSec=1:(size(Valid_Result,1)-1)
     disp([num2str(counter_IntSec+5) '时预测值与红包车重叠数' num2str(Intersect_Counter) '    [*]占预测值' num2str(Intersect_Counter/size(Pred_RedPac,2))...
         '    [**]占红包车数' num2str(Intersect_Counter/ RedPac_Hour_Counter)])
     %画图
-    Pred_Mat=vec2mat(Pred_Vec,100);
+    Pred_Mat=vec2mat(Pred_Vec,height);
     Pred_Mat=Pred_Mat';
     DrawMap_XZ(Pred_Mat,['RedPac Bike Prediction' num2str(counter_IntSec+5) '时'])
-    RedPac_Mat=vec2mat(RedPac_Vec,100);
+    RedPac_Mat=vec2mat(RedPac_Vec,height);
     RedPac_Mat=RedPac_Mat';
     DrawMap_XZ(RedPac_Mat,['RedPac Bike Original Distribution' num2str(counter_IntSec+5) '时'])
 end
