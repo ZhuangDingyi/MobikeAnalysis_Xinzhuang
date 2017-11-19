@@ -1,0 +1,52 @@
+
+clc
+close all
+dateNum_s=20170801;
+dateNum_e=20170813;
+tic
+for ii=dateNum_s:dateNum_e
+    Input_Directory=['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\DataBase\' num2str(ii) '\json'];
+    disp([num2str(ii) '天数据重命名'])
+    copyfile('F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\MATLAB_Data_Cleaning\Script\JsonProcess\Rename_Add.bat',Input_Directory)
+    system([Input_Directory '\Rename_Add.bat'])
+    delete([Input_Directory '\Rename_Add.bat'])
+    disp(['   ' num2str(ii) '天数据重命名成功'])
+    %反爬虫清洗
+    Input_Dir_stru=dir(Input_Directory);
+    for counter=3:length(Input_Dir_stru)
+    i=0;
+    flag=0;
+    fid=fopen([Input_Directory '\' Input_Dir_stru(counter).name ],'r+');
+    while ~feof(fid)
+    tline=fgetl(fid);
+    i=i+1;
+    tmp{i}=tline;
+    if flag
+        tmp{i}=[tmp{i-2},tmp{i}];
+        tmp{i-2}='';
+        flag=0;
+    end
+    if length(tline)<6&&length(tline)>=1
+        tmp{i}='';
+        flag=1;
+    end
+    if tmp{i}=='0'
+        tmp{i}='';
+    end
+    end
+    fclose(fid);
+    fid=fopen([Input_Directory '\' Input_Dir_stru(counter).name ],'w+');
+        for j=1:i-1
+        fprintf(fid,'%s\n',tmp{j});
+        end
+    fclose(fid);
+    
+    end 
+    disp([ num2str(ii) '天的所有Json反爬虫数据流处理完成'])
+    disp(['开始进行' num2str(ii) '天的AutoIT程序调用以及首尾添加'])
+    copyfile('F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\MATLAB_Data_Cleaning\Script\JsonProcess\Cleaning.au3',Input_Directory)
+    system([Input_Directory '\Cleaning.au3'])
+    delete([Input_Directory '\Cleaning.au3'])
+    disp(['   ' num2str(ii) '天数据清洗第一步成功，请'])
+end
+toc 

@@ -1,13 +1,18 @@
+
 clc
-%需要定义全局的变量
-width=80;
-height=80;
+% 需要定义全局的变量
+% width=100;
+% height=100;
+for scale=30:10:100
+    width=scale;
+    height=scale;
 GridsNum=width*height;
 %% --------------Ingestion----------------------
 VariableNames={'bikeIds','Long','Lat','biketype','Time'};
 TextscanFormats={'%s','%.15f', '%.15f' ,'%u' ,'%s'};
-dtNum='Test4All_XZ'; %方便维护代码
+dtNum='20170930_20171111_XZ'; %方便维护代码
 Directory=['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\Data_XZ'];
+Output_image='F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\Output_image';
 Dir_Stru=dir(Directory);
 %由于需要读取每一个文件以后再进行合并OD_MAN，所以现在这里初始化
 OD_M_all=sparse(zeros(GridsNum,GridsNum)); %纵向↓为O 横向→为D 对角线没意义
@@ -210,7 +215,7 @@ tmp_LV_cmt=find(S==ii);
 LV_zone_cmt=[LV_zone_cmt;[tmp_LV_cmt,ii*ones(size(tmp_LV_cmt))]];
 end
 %输出不同时间段的社区标号
-writetable(table(LV_zone_cmt(:,1),LV_zone_cmt(:,2),'VariableNames',{'ZoneIdx','Community'}),['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\LouvainOutput\' dtNum 'OD_' LV_counter '.csv'])
+writetable(table(LV_zone_cmt(:,1),LV_zone_cmt(:,2),'VariableNames',{'ZoneIdx','Community'}),['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\LouvainOutput\' dtNum '\' dtNum num2str(width) '_' num2str(height) 'OD_' LV_counter '.csv'])
 eval([LV_counter  '=LV_zone_cmt(:,1);']);
 eval([LV_counter '_cmt=LV_zone_cmt(:,2);'])
 disp([LV_counter 'finished'])
@@ -219,37 +224,55 @@ end
 b=[M;A;N];%M,A,N为早中晚中有联系的社区（社区中至少两个栅格区域）中的栅格区域编号集
 c=[M_cmt;A_cmt;N_cmt];%M_cmt,A_cmt,N_cmt为早中晚中有联系的社区的社区编号
 LV_Output=table(b,c,'VariableNames',{'ZoneIdx','Community'});
-writetable(LV_Output,['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\LouvainOutput\' dtNum '.csv'])
+writetable(LV_Output,['F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\KMeansClustering\LouvainOutput\' dtNum '\' LouvainOutput_' dtNum '_' num2str(width) '_' num2str(height) '.csv'])
 clear b c M A N M_cmt A_cmt N_cmt LV_zone_cmt
 
 %% 10000序数转化为二维平面并且实现初步的可视化
 %先针对O点
 % for ii=['M','A','N']
 XZ_map=imread('F:\ScientificResearch\ChunTsung\DataSource\Crawler_Human\ArcGis_Vis_Test\LongLat_XZ_PS\成品.png');
-% 透明化处理尝试
-% [m1,n1,l1]=size(SJTU_map);
-% t_map=zeros(m1,n1,l1);
-% t_map=uint8(t_map);
-% C=imadd(0.5*t_map,SJTU_map);
-% imshow(C)
-for ii=['M','A','N']
 
-% eval(['OD_sumO_' ii '=sum(OD_' ii '_all,2);']); %2是起点图,1是终点图
-% eval(['test=vec2mat(  OD_sumO_' ii ',100);'])
+for ii=['M','A','N']
 %------更新于2017-10-12
 eval(['test=vec2mat(  Supply_' ii '_all,height);'])
 %-----
+test=test';
+% test=flipud(test);
+figure
+[x_map,y_map,~]=size(XZ_map);
+
+imshow(XZ_map)
+hold on
+s=surf(linspace(1,y_map,width),linspace(1,x_map,height),0*test,test);
+
+shading interp
+view(2)
+hold off
+alpha(s,.5)
+colorbar
+
+title(['SupplyAll_' ii])
+% eval([ 'print( [Output_image ''\SupplyAll_'' ' ii '],''-dpng''  ) ' ])
+print( [Output_image '\SupplyAll_' ii],'-dpng'  )
+clear x_map y_map 
+
+eval ( ['disMax= max( Supply_' ii '_all );   '])
+eval ( ['disMean= mean( Supply_' ii '_all );   '])
+disp([ 'Supply' ii '的最大值为' num2str(disMax) '平均值为' num2str(disMean) ])
+
+end
+
+for ii=['M','A','N']
+
+eval(['OD_sumO_' ii '=sum(OD_' ii '_all,2);']); %2是起点图,1是终点图
+eval(['test=vec2mat(  OD_sumO_' ii ',height);'])
 
 test=test';
 % test=flipud(test);
 
 figure
 [x_map,y_map,~]=size(XZ_map);
-%  surf(1:100,-1:-1:-100,test)
-% grid_map=surf(linspace(1,y_map,100),linspace(x_map,1,100),0*test,test);
-% view(2)
-% K=imadd(grid_map,SJTU_map);
-% imshow(K)
+
 imshow(XZ_map)
 hold on
 s=surf(linspace(1,y_map,width),linspace(1,x_map,height),0*test,test);
@@ -261,12 +284,46 @@ hold off
 alpha(s,.5)
 colorbar
 
-title(['SupplyAll_' ii])
+title(['OriginAll_' ii])
+print( [Output_image '\OriginAll_' ii],'-dpng'  )
+
 clear x_map y_map 
 
-eval ( ['disMax= max( Supply_' ii '_all );   '])
-eval ( ['disMean= mean( Supply_' ii '_all );   '])
-disp([ 'Supply' ii '的最大值为' num2str(disMax) '平均值为' num2str(disMean) ])
+
+eval ( ['disMax= max( OD_sumO_' ii ' );   '])
+eval ( ['disMean= mean( OD_sumO_' ii ' );   '])
+disp([ 'Origin' ii '的最大值为' num2str(disMax) '平均值为' num2str(disMean) ])
+
+end
+
+for ii=['M','A','N']
+
+eval(['OD_sumO_' ii '=sum(OD_' ii '_all,1);']); %2是起点图,1是终点图
+eval(['test=vec2mat(  OD_sumO_' ii ',height);'])
+
+test=test';
+% test=flipud(test);
+
+figure
+[x_map,y_map,~]=size(XZ_map);
+
+imshow(XZ_map)
+hold on
+s=surf(linspace(1,y_map,width),linspace(1,x_map,height),0*test,test);
+
+shading interp
+view(2)
+hold off
+alpha(s,.5)
+colorbar
+
+title(['DestinationAll_' ii])
+print( [Output_image '\DestinationAll_' ii],'-dpng'  )
+clear x_map y_map 
+
+eval ( ['disMax= max( OD_sumO_' ii ' );   '])
+eval ( ['disMean= mean( OD_sumO_' ii ' );   '])
+disp([ 'Destination' ii '的最大值为' num2str(disMax) '平均值为' num2str(disMean) ])
 
 end
 %% 如何评价一个区域的单车额投放量是否足够了呢？Louvain只是反映了这个区域的联系比较紧密的OD对，但是在不同时间段下
@@ -322,12 +379,32 @@ bar([6:24],Supp_hist)
 clear counter tmp ii tmp_reg
 % Supp_Vec=sparse(zeros(1,10000));
 %% 同一个社区究竟是哪一些区域
+
 [LV_Output_cmt_uniq,idx_LV_o2n,idx_LV_n2o]=unique(LV_Output.Community);
+detector_cmt=length(LV_Output_cmt_uniq);
+if ~exist([Output_image '\' num2str(width) '_' num2str(height)])
+    mkdir([Output_image '\' num2str(width) '_' num2str(height)])
+end
+Louvaincmt_video=VideoWriter([Output_image '\' num2str(width) '_' num2str(height) ' LouvainCmt.avi' ]);
+Louvaincmt_video.FrameRate=2;
+open(Louvaincmt_video)
+for ii=1:detector_cmt
 Cmt_Vec=sparse(zeros(1,GridsNum));
-Cmt_Vec(LV_Output.ZoneIdx(idx_LV_n2o==10))=1; %可以在这里更换要查看的不同的社区编号，可以发现有意思的区域，如2，
+Cmt_Vec(LV_Output.ZoneIdx(idx_LV_n2o==ii))=1; %可以在这里更换要查看的不同的社区编号，可以发现有意思的区域，如2，
 Cmt_Mat=vec2mat(Cmt_Vec,height);
 Cmt_Mat=Cmt_Mat';
-DrawMap_XZ(Cmt_Mat,'LouvainCmtDistribution',width,height)
+[frame,handler]=DrawMap_XZ(Cmt_Mat,[num2str(width) '*' num2str(height) ' LouvainCmtDistribution No.' num2str(LV_Output_cmt_uniq(ii))],width,height);
+writeVideo(Louvaincmt_video,frame)
+print( [Output_image '\' num2str(width) '_' num2str(height) '\LouvainCmtDistribution_' num2str(LV_Output_cmt_uniq(ii))],'-dpng'  )%这一步应该是LV_Output_cmt_uniq(ii)吧？对应起来
+close(handler)
+end
+clear frame
+close(Louvaincmt_video)
+close all %关掉所有figure
+disp(['栅格数' num2str(scale) '完成'])
+
+end
+%{
 %% 开始验证模型的准确性 Part 1/2（预测可能存在的红包车），只判断是否为红包车，具体红包到哪里不予以讨论
 % 先求出供给量
 %
@@ -375,7 +452,7 @@ load dataStore_hour_origin_XZ.mat
 for i=1:length(dataStore_hour)
     disp([num2str(i) '个max' num2str(max(dataStore_hour{i,1}))])
 end
-%}
+%%}
 %% 根据社区以及单体进行最后的判断 Part 2/2
 %先根据每个时间段区分
 load dataStore_hour_origin_XZ.mat
@@ -534,10 +611,10 @@ for counter_IntSec=1:(size(Valid_Result,1)-1)
     %画图
     Pred_Mat=vec2mat(Pred_Vec,height);
     Pred_Mat=Pred_Mat';
-    DrawMap_XZ(Pred_Mat,['RedPac Bike Prediction' num2str(counter_IntSec+5) '时'])
+    DrawMap_XZ(Pred_Mat,['RedPac Bike Prediction' num2str(counter_IntSec+5) '时'],width,height)
     RedPac_Mat=vec2mat(RedPac_Vec,height);
     RedPac_Mat=RedPac_Mat';
-    DrawMap_XZ(RedPac_Mat,['RedPac Bike Original Distribution' num2str(counter_IntSec+5) '时'])
+    DrawMap_XZ(RedPac_Mat,['RedPac Bike Original Distribution' num2str(counter_IntSec+5) '时'],width,height)
 end
 for counter_IntSec=0
    Intersect_Counter=0;
